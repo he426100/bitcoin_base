@@ -1,8 +1,9 @@
 import 'dart:async';
+import 'dart:js_interop';
+import 'dart:typed_data';
 
 import 'core.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html';
+import 'package:web/web.dart';
 
 Future<WebSocketCore> connectSoc(String url, {List<String>? protocols}) async =>
     await WebsocketWeb.connect(url);
@@ -29,7 +30,11 @@ class WebsocketWeb implements WebSocketCore {
 
   @override
   void close({int? code}) {
-    _socket.close(code, '');
+    if (code != null) {
+      _socket.close(code, '');
+    } else {
+      _socket.close();
+    }
   }
 
   @override
@@ -40,7 +45,9 @@ class WebsocketWeb implements WebSocketCore {
   static Future<WebsocketWeb> connect(String url,
       {List<String>? protocols}) async {
     final completer = Completer<WebsocketWeb>();
-    final socket = WebSocket(url, protocols);
+    final socket = protocols != null 
+        ? WebSocket(url, protocols.map((e) => e.toJS).toList().toJS)
+        : WebSocket(url);
     WebsocketWeb._(socket)._connectedCompleter.future.then((_) {
       completer.complete(WebsocketWeb._(socket));
     });
@@ -49,6 +56,6 @@ class WebsocketWeb implements WebSocketCore {
 
   @override
   void sink(List<int> message) {
-    _socket.send(message);
+    _socket.send(Uint8List.fromList(message).toJS);
   }
 }
